@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS — AI勉強会</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #F5F0E8;
+  --surface:   #FFFFFF;
+  --surface-2: #FBF7F1;
+  --border:    #E0D9CD;
+  --ink:       #1C1814;
+  --muted:     #7A7060;
+  --body:      #3A322D;
+  --accent:    #D4622A;
+  --accent-soft: #FFF4ED;
+  --accent-mid:  #F4A07A;
+  --wire:      #A89B85;
+  --icon:      #9C907C;
+}
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior:auto !important; } }
+
+html, body { height: 100%; background: var(--bg); overflow: hidden; }
+body {
+  font-family: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", system-ui, -apple-system, sans-serif;
+  color: var(--body);
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════ ICONS ═══════════════════════ */
+.ico { flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; color: var(--icon); transition: color .2s; }
+.box .ico { width: 1.55cqw; height: 1.55cqw; }
+.zlabel .ico { width: 1.2cqw; height: 1.2cqw; color: inherit; opacity: .85; }
+.person .ico { width: 3.2cqw; height: 3.2cqw; color: var(--accent-mid); }
+.vault .ico { width: 2.3cqw; height: 2.3cqw; color: var(--accent); }
+.subeyebrow .ico { width: 1cqw; height: 1cqw; color: inherit; }
+.chipsm .ico { width: 1.9cqw; height: 1.9cqw; color: var(--icon); }
+
+/* ═══════════════════════ DIAGRAM (reused design language) ═══════════════════════ */
+.frame { height:100%; display:flex; }
+.canvas { position: relative; width: 100%; min-width: 900px; aspect-ratio: 1640 / 1100; container-type: size; }
+.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.wire { fill: none; stroke: var(--wire); stroke-width: 1.7; transition: opacity .2s, stroke .2s; }
+.wire.thin { stroke-dasharray: 5 5; stroke-width: 1.2; }
+
+.node { position: absolute; transition: opacity .2s, border-color .2s, box-shadow .2s; }
+
+.zone { border: 1.5px dashed var(--border); border-radius: 12px; background: rgba(255,255,255,.45); }
+.zone > .zlabel { position: absolute; top: 0.9cqh; left: 1cqw; right: 1cqw; display: flex; align-items: center; gap: 0.45cqw; font-size: 1.0cqw; font-weight: 800; color: var(--muted); letter-spacing: 0.04em; }
+.zone.io > .zlabel { color: var(--accent); }
+
+.subeyebrow { display: flex; align-items: center; gap: 0.35cqw; font-size: 0.75cqw; font-weight: 800; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+.divider { border-left: 1.5px dashed var(--border); }
+
+.chipsm { background: var(--surface); border: 1.3px dashed var(--border); border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3cqh; }
+.chipsm .lbl { font-size: 0.72cqw; color: var(--muted); font-weight: 700; line-height: 1.2; text-align: center; }
+
+.box { background: var(--surface); border: 1.5px solid var(--border); border-radius: 9px; display: flex; flex-direction: column; justify-content: center; gap: 0.22cqh; padding: 0.7cqh 0.6cqw; text-align: center; }
+.box .hd { display: flex; align-items: center; justify-content: center; gap: 0.42cqw; }
+.box.stack .hd { flex-direction: column; gap: 0.35cqh; }
+.box .t { font-size: 1.12cqw; font-weight: 800; color: var(--ink); line-height: 1.25; }
+.box .d { font-size: 0.9cqw; color: var(--muted); line-height: 1.35; }
+.box .tech { font-size: 0.85cqw; color: var(--accent); font-weight: 700; line-height: 1.3; }
+.box .time { font-size: 0.85cqw; font-weight: 800; color: var(--accent); letter-spacing: 0.03em; }
+.box.future { border-style: dashed; }
+.box.future .t { color: var(--accent); }
+.box.future .tech { color: var(--muted); }
+.chipsm.future { border-style: dashed; opacity: .75; }
+.chipsm.future .lbl { color: var(--accent); }
+
+.person { background: var(--ink); border-radius: 12px; color: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.45cqh; padding: 1cqh 0.6cqw; text-align: center; }
+.person .t { font-size: 1.25cqw; font-weight: 900; }
+.person .d { font-size: 0.88cqw; color: #C9BFAE; line-height: 1.4; }
+
+.vault { background: var(--surface); border: 2px solid var(--accent); border-radius: 12px; display: flex; flex-direction: column; padding: 1.2cqh 1cqw; gap: 1cqh; }
+.vault .vhead { text-align: center; }
+.vault .vtrow { display: flex; align-items: center; justify-content: center; gap: 0.6cqw; }
+.vault .vt { font-size: 1.7cqw; font-weight: 900; color: var(--ink); line-height: 1.2; }
+.vault .vs { font-size: 0.95cqw; color: var(--accent); font-weight: 700; margin-top: 0.3cqh; }
+.vault .flow { display: flex; align-items: center; justify-content: center; gap: 0.35cqw; background: var(--accent-soft); border: 1px solid var(--accent-mid); border-radius: 7px; padding: 0.7cqh 0.4cqw; }
+.vault .flow .s { font-size: 0.92cqw; font-weight: 700; color: var(--ink); }
+.vault .flow .a { font-size: 0.9cqw; color: var(--accent); font-weight: 800; }
+.dirgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.55cqh 0.5cqw; flex: 1; align-content: center; }
+.dircell { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0.55cqh 0.3cqw; display: flex; flex-direction: column; align-items: center; gap: 0.12cqh; }
+.dircell .dn { font-family: "SF Mono", "Menlo", monospace; font-size: 0.84cqw; font-weight: 800; color: var(--accent); white-space: nowrap; }
+.dircell .dr { font-size: 0.76cqw; color: var(--body); font-weight: 700; }
+.vfoot { font-family: "SF Mono", "Menlo", monospace; font-size: 0.78cqw; color: var(--muted); text-align: center; line-height: 1.35; }
+
+/* route focus (fixed per slide, no buttons) */
+.canvas.focus .node { opacity: .14; }
+.canvas.focus .wire { opacity: .07; }
+.canvas.focus .node.on { opacity: 1; }
+.canvas.focus .box.on { border-color: var(--accent); box-shadow: 0 0 0 2.5px rgba(212,98,42,.16); }
+.canvas.focus .box.on .ico { color: var(--accent); }
+.canvas.focus .wire.on { opacity: 1; stroke: var(--accent); stroke-width: 2.4; }
+
+/* zone focus (mini thumbnails: 考える/覚える/触る) */
+.canvas.zonefocus .node { opacity: .1; }
+.canvas.zonefocus .wire { opacity: .04; }
+.canvas.zonefocus .node.zone-on { opacity: 1; }
+.canvas.zonefocus .box.zone-on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(212,98,42,.16); }
+.canvas.zonefocus .zone.zone-on { border-color: var(--accent); background: rgba(255,244,237,.9); }
+.canvas.zonefocus .vault.zone-on { box-shadow: 0 0 0 3px rgba(212,98,42,.2); }
+
+/* numbered axis badges (used when all 3 zones are highlighted together) */
+.axis-badge { display: none; position: absolute; width: 2.4cqw; height: 2.4cqw; min-width: 22px; min-height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 900; font-size: 1.3cqw; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,.18); z-index: 5; }
+.canvas.show-badges .axis-badge { display: flex; }
+
+/* diagram slot sizing variants */
+.diagram-slot.full { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.diagram-slot.full .frame { flex: 1; align-items: center; justify-content: center; }
+.diagram-slot.full .canvas { width: 100%; height: auto; min-width: 0; margin: 0 auto; }
+.diagram-slot.mini .canvas { min-width: 0; }
+.diagram-slot.mini .frame { padding: .3rem; }
+
+/* ═══════════════════════ DECK SHELL ═══════════════════════ */
+.deck { height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory; }
+.slide {
+  height: 100vh; width: 100vw; scroll-snap-align: start; scroll-snap-stop: always;
+  display: flex; flex-direction: column; justify-content: flex-start;
+  padding: 2.6cqh 4.2cqw 3.6cqh; position: relative; container-type: size; overflow: hidden;
+}
+
+/* header block: pinned to top, divider marks the end of "the message" */
+.shead { flex: 0 0 auto; padding-bottom: 1.3cqh; margin-bottom: 1.8cqh; border-bottom: 2.5px solid var(--border); }
+.kicker { font-size: 1.25cqh; font-weight: 800; color: var(--accent); letter-spacing: .1em; margin-bottom: .7cqh; }
+h1.headline { font-size: 6.6cqh; font-weight: 900; color: var(--ink); line-height: 1.15; letter-spacing: -0.015em; max-width: 92cqw; }
+.shead.tight h1.headline { font-size: 4.3cqh; white-space: nowrap; max-width: none; }
+.lede { font-size: 2.1cqh; color: var(--body); margin-top: 1.6cqh; max-width: 75cqw; line-height: 1.6; }
+
+/* body block: everything under the divider, fills remaining height */
+.sbody { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-start; }
+
+.skip-badge { position: absolute; top: 2.6cqh; right: 4.2cqw; font-size: 1.05cqh; font-weight: 800; color: var(--muted); border: 1.3px dashed var(--border); border-radius: 99px; padding: .5cqh 1.3cqw; }
+
+/* ── navrail ── */
+.navrail { position: fixed; left: 0; right: 0; bottom: 0; height: 5.6vh; display: flex; align-items: center; justify-content: center; gap: 2.2vw; background: linear-gradient(to top, rgba(245,240,232,.97), rgba(245,240,232,0)); z-index: 50; }
+.navrail .seg { font-family: inherit; font-size: .95vw; font-weight: 800; color: var(--muted); background: none; border: none; cursor: pointer; padding: .3vh .4vw; transition: color .15s; }
+.navrail .seg:hover { color: var(--accent-mid); }
+.navrail .seg.active { color: var(--accent); }
+.navrail .counter { font-family: "SF Mono", "Menlo", monospace; font-size: .8vw; color: var(--muted); margin-left: .6vw; }
+
+@media print {
+  html, body { overflow: visible; height: auto; }
+  .deck { height: auto; overflow: visible; }
+  .slide { height: 100vh; scroll-snap-align: none; page-break-after: always; }
+  .navrail { display: none; }
+}
+
+/* ═══════════════════════ COMPONENTS ═══════════════════════ */
+
+/* title slide (only slide without a header/divider — pure cover) */
+.slide.title { justify-content: center; align-items: center; text-align: center; }
+.slide.title .kicker { letter-spacing: .14em; }
+.slide.title .brand { font-size: 13cqh; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.slide.title .lede { max-width: 85cqw; margin-top: 2.4cqh; font-size: 2.6cqh; }
+.slide.title .meta { margin-top: 3.4cqh; font-size: 1.3cqh; color: var(--muted); font-weight: 700; display: flex; gap: 1.4cqw; }
+
+/* card grid (goals / memory / support-stack) */
+.cardgrid { display: grid; gap: 1.8cqw; }
+.cardgrid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.cardgrid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.vcard { background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; padding: 4.2cqh 2.2cqw; display: flex; flex-direction: column; gap: 1.6cqh; }
+.vcard .ico { width: 5cqh; height: 5cqh; color: var(--accent); }
+.vcard .vt { font-size: 2.8cqh; font-weight: 800; color: var(--ink); line-height: 1.2; }
+.vcard .vd { font-size: 1.85cqh; color: var(--body); line-height: 1.5; }
+
+/* comparison table */
+table.cmp { width: 100%; border-collapse: collapse; }
+table.cmp th { text-align: left; font-size: 1.55cqh; color: var(--muted); font-weight: 800; padding: 1.5cqh 1.4cqw; border-bottom: 2.5px solid var(--border); }
+table.cmp td { font-size: 2cqh; color: var(--body); padding: 2.1cqh 1.4cqw; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.45; }
+table.cmp td.hd { font-weight: 800; color: var(--accent); white-space: nowrap; }
+
+/* split 2-panel */
+.split2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2.4cqw; }
+.panel { background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; padding: 3.2cqh 2.4cqw; }
+.panel .ph { display: flex; align-items: center; gap: .8cqw; font-size: 2.5cqh; font-weight: 800; color: var(--ink); margin-bottom: 1.8cqh; }
+.panel .ph .ico { width: 3cqh; height: 3cqh; color: var(--accent); }
+.panel ul { list-style: none; display: flex; flex-direction: column; gap: 1.3cqh; }
+.panel li { font-size: 1.9cqh; color: var(--body); padding-left: 1.4cqw; position: relative; line-height: 1.4; }
+.panel li::before { content: ""; position: absolute; left: 0; top: .82cqh; width: .45cqw; height: .45cqw; min-width:6px; min-height:6px; border-radius: 50%; background: var(--accent); }
+.panel .tag { display: inline-block; font-size: 1.5cqh; font-weight: 800; color: var(--accent); background: var(--accent-soft); border-radius: 8px; padding: .7cqh 1.2cqw; margin-top: 1.8cqh; line-height: 1.4; }
+.notline { margin-top: 1.6cqh; font-size: 1.8cqh; color: var(--body); background: var(--surface-2); border-left: 5px solid var(--accent); border-radius: 10px; padding: 1.8cqh 2cqw; line-height: 1.5; }
+.notline b { color: var(--accent); font-weight: 800; }
+.notline:first-child { margin-top: 0; }
+
+/* directory showcase (standalone, for 記憶①) */
+.dirshow { max-width: 96cqw; width: 100%; margin: 0 auto; }
+.dirflow { display: flex; align-items: center; justify-content: center; gap: 1.3cqw; background: var(--accent-soft); border: 1px solid var(--accent-mid); border-radius: 12px; padding: 2.2cqh 1cqw; }
+.dirflow .s { font-family: "SF Mono", "Menlo", monospace; font-size: 2.1cqh; font-weight: 800; color: var(--ink); }
+.dirflow .a { font-size: 2cqh; color: var(--accent); font-weight: 800; }
+.dirgrid2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4cqh 1.2cqw; margin-top: 1.7cqh; }
+.dircell2 { background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 2.1cqh 1.2cqw; display: flex; flex-direction: column; align-items: center; gap: .55cqh; }
+.dircell2.accent { border-color: var(--accent); background: var(--accent-soft); }
+.dircell2 .dn { font-family: "SF Mono", "Menlo", monospace; font-size: 1.95cqh; font-weight: 800; color: var(--accent); white-space: nowrap; }
+.dircell2 .dr { font-size: 1.6cqh; color: var(--body); font-weight: 700; }
+.vaultnote { margin-top: 1.8cqh; font-size: 2.3cqh; color: var(--muted); text-align: center; line-height: 1.5; }
+.vaultnote b { color: var(--accent); font-weight: 800; }
+
+/* axis legend (single-diagram version of the 3-axes intro) */
+.axislegend { display: flex; gap: 2.4cqw; margin-bottom: .8cqh; flex: 0 0 auto; }
+.axislegend .aitem { display: flex; align-items: center; gap: .6cqw; font-size: 1.7cqh; font-weight: 800; color: var(--ink); }
+.axislegend .anum { display: inline-flex; align-items: center; justify-content: center; width: 1.8cqh; height: 1.8cqh; min-width: 18px; min-height: 18px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 1.1cqh; font-weight: 900; }
+.diagram-slot.full.axes .canvas { width: 84%; }
+
+/* mini diagram row (3 axes intro) */
+.minirow { display: flex; gap: 2.4cqw; align-items: stretch; flex: 1; min-height: 0; }
+.minicol { flex: 1; display: flex; flex-direction: column; gap: 1.2cqh; min-height: 0; }
+.minicol .minihead { display: flex; align-items: baseline; gap: .7cqw; }
+.minicol .minidx { font-size: 1.5cqh; font-weight: 900; color: var(--accent); }
+.minicol .minilabel { font-size: 2.1cqh; font-weight: 800; color: var(--ink); }
+.minicol .minisub { font-size: 1.3cqh; color: var(--muted); }
+.diagram-slot.mini { flex: 1; min-height: 0; }
+
+/* step flow (editor evolution) */
+.stepflow { display: flex; align-items: stretch; gap: 1.5cqw; }
+.stepflow .step { flex: 1; background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; padding: 2.6cqh 2.2cqw; display: flex; flex-direction: column; justify-content: center; }
+.stepflow .step.final { border-color: var(--accent); background: var(--accent-soft); }
+.stepflow .step .idx { font-size: 1.5cqh; font-weight: 800; color: var(--muted); }
+.stepflow .step.final .idx { color: var(--accent); }
+.stepflow .step .st { font-size: 2.9cqh; font-weight: 800; color: var(--ink); margin-top: .6cqh; }
+.stepflow .step .sr { font-size: 1.85cqh; color: var(--body); margin-top: 1.6cqh; line-height: 1.5; }
+.stepflow .arrow { display: flex; align-items: center; color: var(--muted); font-size: 2.8cqh; font-weight: 700; }
+.decisive { margin-top: 1.6cqh; font-size: 1.75cqh; font-weight: 800; color: var(--accent); }
+
+/* gap rows (ch.4) */
+.gaprow { display: grid; grid-template-columns: 1.15fr 2fr 2fr; gap: 1.8cqw; align-items: start; padding: 2.3cqh 0; border-bottom: 1px solid var(--border); }
+.gaprow:first-of-type { border-top: 1px solid var(--border); }
+.gaprow .gi { font-size: 2.1cqh; font-weight: 800; color: var(--ink); display: flex; align-items: center; gap: .6cqw; padding-top: .2cqh; }
+.gaprow .gi .ico { width: 2.6cqh; height: 2.6cqh; color: var(--accent); }
+.gaprow .now, .gaprow .next { font-size: 1.75cqh; color: var(--body); line-height: 1.45; }
+.gaprow .lbl { display: block; font-size: 1.25cqh; font-weight: 800; color: var(--muted); letter-spacing: .06em; margin-bottom: .4cqh; }
+.notes-admit { margin-top: 1.6cqh; display: flex; flex-direction: column; gap: .8cqh; }
+.notes-admit p { font-size: 1.65cqh; color: var(--body); line-height: 1.5; }
+.outlook { margin-top: 1.6cqh; font-size: 1.9cqh; color: var(--ink); font-weight: 700; background: var(--accent-soft); border-radius: 12px; padding: 1.9cqh 2.1cqw; line-height: 1.5; }
+
+/* agenda / scope (intro) */
+.agenda { display: flex; gap: 1.3cqw; margin-top: 2.6cqh; }
+.achip { flex: 1; border: 1.5px solid var(--border); border-radius: 12px; padding: 2.1cqh 1cqw; text-align: center; font-size: 1.7cqh; font-weight: 800; color: var(--muted); }
+.achip.now { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.scopebox { display: flex; flex-direction: column; gap: 1.8cqh; }
+.scopeline { font-size: 2.4cqh; color: var(--body); display: flex; gap: 1cqw; align-items: baseline; line-height: 1.45; }
+.scopeline b { color: var(--ink); font-weight: 800; }
+
+/* closing */
+.slide.closing .sbody { align-items: center; justify-content: center; text-align: center; }
+.closing .msg { font-size: 4.2cqh; font-weight: 800; color: var(--ink); max-width: 85cqw; line-height: 1.9; }
+.closing .cta { margin-top: 3cqh; font-size: 2.1cqh; color: var(--accent); font-weight: 700; }
+
+/* reveal body (JARVIS naming) */
+.revealbox { display: flex; flex-direction: column; gap: 2.4cqh; max-width: 90cqw; }
+.revealbox p { font-size: 3cqh; color: var(--body); line-height: 1.5; font-weight: 700; }
+
+/* route caption under full diagrams */
+.routecaption { margin-top: 1.6cqh; font-size: 1.6cqh; color: var(--body); text-align: center; line-height: 1.5; }
+.routecaption b { color: var(--accent); font-weight: 800; }
+
+@media (max-width: 760px) {
+  .cardgrid.cols-4, .cardgrid.cols-3 { grid-template-columns: 1fr 1fr; }
+  .split2 { grid-template-columns: 1fr; }
+  .stepflow { flex-direction: column; }
+  .minirow { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 20.5c0-4 3.1-6.3 7-6.3s7 2.3 7 6.3"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.2"/><path d="M7 10l3 2.6-3 2.6M13.5 15.2h4"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19.2 8.8a2.6 2.6 0 0 0-3.7-3.7L4 16.6V20z"/><path d="M14.4 6.6l3.7 3.7"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2.8" width="6" height="11" rx="3"/><path d="M5.2 11.2a6.8 6.8 0 0 0 13.6 0M12 18v3.2"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 9.4a6 6 0 1 0-12 0c0 4.8-2 6-2 6h16s-2-1.2-2-6z"/><path d="M10.3 19.4a2 2 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2.8H7.2a2.2 2.2 0 0 0-2.2 2.2v14a2.2 2.2 0 0 0 2.2 2.2h9.6a2.2 2.2 0 0 0 2.2-2.2V8z"/><path d="M14 2.8V8h5M8.6 13h6.8M8.6 16.8h4.6"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9.2v5.6h3.4L12.8 19V5L7.4 9.2H4z"/><path d="M16.2 9.6a4 4 0 0 1 0 4.8M18.8 7a7.6 7.6 0 0 1 0 10"/></symbol>
+  <symbol id="i-gate" viewBox="0 0 24 24"><path d="M3.5 20.5h17M6 20.5V5a1.4 1.4 0 0 1 1.4-1.4h9.2A1.4 1.4 0 0 1 18 5v15.5"/><circle cx="14.6" cy="12.3" r="1.1"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M10 3.2l1.8 4.8 4.8 1.8-4.8 1.8L10 16.4 8.2 11.6 3.4 9.8l4.8-1.8z"/><path d="M17.6 14.4l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.8"/><path d="M10 3.2V7M14 3.2V7M10 17v3.8M14 17v3.8M3.2 10H7M3.2 14H7M17 10h3.8M17 14h3.8"/></symbol>
+  <symbol id="i-split" viewBox="0 0 24 24"><circle cx="5.5" cy="5.5" r="2"/><circle cx="18.5" cy="5.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/><path d="M5.5 7.5v9.5M5.5 10h7a3.3 3.3 0 0 0 3.3-3.3M5.5 15h7a3.3 3.3 0 0 1 3.3 3.3"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2.6l9.4 4.7L12 12 2.6 7.3z"/><path d="M2.6 12L12 16.7 21.4 12M2.6 16.7L12 21.4l9.4-4.7"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2.8v6M15 2.8v6M6.6 8.8h10.8v3.4a5.4 5.4 0 0 1-10.8 0z"/><path d="M12 17.6v3.6"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.8l7.4 3v5.6c0 4.6-3.1 8-7.4 9-4.3-1-7.4-4.4-7.4-9V5.8z"/><path d="M9 12.2l2.2 2.2L15.2 10"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.2" y="5" width="17.6" height="16" rx="2.2"/><path d="M3.2 10h17.6M8.2 2.8V7M15.8 2.8V7"/></symbol>
+  <symbol id="i-feed" viewBox="0 0 24 24"><rect x="2.8" y="5" width="14.4" height="14" rx="2"/><path d="M6 9.4h8M6 13.4h5.4M17.2 9.4h2a1.8 1.8 0 0 1 1.8 1.8v6a1.8 1.8 0 0 1-1.8 1.8"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4M12 2.8c2.6 2.6 3.9 5.9 3.9 9.2s-1.3 6.6-3.9 9.2c-2.6-2.6-3.9-5.9-3.9-9.2S9.4 5.4 12 2.8z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="M12 6.6V12l3.6 2.2"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.4" y="3.4" width="7.2" height="7.2" rx="1.8"/><rect x="13.4" y="3.4" width="7.2" height="7.2" rx="1.8"/><rect x="3.4" y="13.4" width="7.2" height="7.2" rx="1.8"/><rect x="13.4" y="13.4" width="7.2" height="7.2" rx="1.8"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3.2 12a8.8 8.8 0 1 0 2.9-6.5"/><path d="M3.2 4.6v5h5"/><path d="M12 7.8v4.6l3.2 1.9"/></symbol>
+  <symbol id="i-in" viewBox="0 0 24 24"><path d="M14 3.4h4a2.2 2.2 0 0 1 2.2 2.2v12.8A2.2 2.2 0 0 1 18 20.6h-4"/><path d="M3.6 12h11M10.8 8.2l3.8 3.8-3.8 3.8"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M10 3.4H6a2.2 2.2 0 0 0-2.2 2.2v12.8A2.2 2.2 0 0 0 6 20.6h4"/><path d="M9.4 12h11M16.6 8.2l3.8 3.8-3.8 3.8"/></symbol>
+  <symbol id="i-brain" viewBox="0 0 24 24"><path d="M12 5.2a3 3 0 0 0-5.6-1.1A3 3 0 0 0 3.6 9a3.2 3.2 0 0 0 .6 5.4A3 3 0 0 0 7.8 19 3 3 0 0 0 12 18.4z"/><path d="M12 5.2a3 3 0 0 1 5.6-1.1A3 3 0 0 1 20.4 9a3.2 3.2 0 0 1-.6 5.4A3 3 0 0 1 16.2 19 3 3 0 0 1 12 18.4z"/></symbol>
+  <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4" y="4.5" width="16" height="10.5" rx="1.5"/><path d="M2.2 19.5h19.6M9 19.5l.6-2.3h4.8l.6 2.3"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.5" y="2.4" width="11" height="19.2" rx="2.4"/><path d="M10.4 18.4h3.2"/></symbol>
+  <symbol id="i-glasses" viewBox="0 0 24 24"><circle cx="6.5" cy="13" r="3.4"/><circle cx="17.5" cy="13" r="3.4"/><path d="M9.9 12.4h4.2M3.1 12.4L1.4 10M20.9 12.4l1.7-2.4"/></symbol>
+  <symbol id="i-earbuds" viewBox="0 0 24 24"><path d="M5 12V9a7 7 0 0 1 14 0v3"/><rect x="2.6" y="12" width="4.6" height="7" rx="2.2"/><rect x="16.8" y="12" width="4.6" height="7" rx="2.2"/></symbol>
+  <symbol id="i-watch" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2.4"/><path d="M9.6 2.6h4.8M9.6 21.4h4.8M12 10.2V12l1.6 1"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7.2 18.6h9.9a4.3 4.3 0 0 0 .6-8.5 6.4 6.4 0 0 0-12.1-1.4 4.2 4.2 0 0 0 1.6 9.9z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2.6" y="6.2" width="18.8" height="12" rx="2"/><path d="M6 10h.6M9 10h.6M12 10h.6M15 10h.6M18 10h.6M6 13.4h.6M9 13.4h.6M12 13.4h.6M15 13.4h.6M18 13.4h.6M8 16.6h8"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4"/><path d="M6 4.6c1.8-1.3 3.6-1.3 5.4 0s3.6 1.3 5.4 0v7.6c-1.8 1.3-3.6 1.3-5.4 0s-3.6-1.3-5.4 0z"/></symbol>
+</svg>
+
+<!-- ═══════════ 図テンプレート（7箇所で複製使用）═══════════ -->
+<template id="diagram-tpl">
+<div class="frame">
+<div class="canvas">
+  <svg class="wires" viewBox="0 0 1640 1100" preserveAspectRatio="none" aria-hidden="true">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="context-stroke"/></marker></defs>
+    <path class="wire thin" data-path="" d="M160,468 L183,468 L183,160 L190,160" marker-end="url(#ah)" marker-start="url(#ah)"/>
+    <path class="wire" data-path="abc" d="M160,500 L180,500 L180,355 L190,355" marker-end="url(#ah)" marker-start="url(#ah)"/>
+    <path class="wire" data-path="abc" d="M160,560 L180,560 L180,639 L190,639" marker-end="url(#ah)" marker-start="url(#ah)"/>
+    <path class="wire" data-path="a" d="M392,312 L480,312 L480,199 L607,199" marker-end="url(#ah)"/>
+    <path class="wire" data-path="a" d="M392,374 L480,374 L480,420 L596,420" marker-end="url(#ah)"/>
+    <path class="wire" data-path="c" d="M392,589 L392,220 L607,220" marker-end="url(#ah)"/>
+    <path class="wire" data-path="c" d="M596,610 L440,610 L440,734 L392,734" marker-end="url(#ah)"/>
+    <path class="wire" data-path="abc" d="M574,528 L596,528" marker-end="url(#ah)"/>
+    <path class="wire" data-path="ac" d="M683,237 L683,341" marker-end="url(#ah)" marker-start="url(#ah)"/>
+    <path class="wire" data-path="b" d="M568,815 L568,278 L820,278" marker-end="url(#ah)"/>
+    <path class="wire" data-path="b" d="M869,278 L869,237" marker-end="url(#ah)"/>
+    <path class="wire" data-path="b" d="M1040,278 L1040,237" marker-end="url(#ah)"/>
+    <path class="wire" data-path="b" d="M860,815 L860,759" marker-end="url(#ah)"/>
+    <path class="wire" data-path="b" d="M596,660 L460,660 L460,678 L392,678" marker-end="url(#ah)"/>
+    <path class="wire" data-path="b" d="M596,458 L392,458" marker-end="url(#ah)"/>
+    <path class="wire" data-path="ac" d="M1136,400 L1160,400 L1160,308 L1189,308" marker-end="url(#ah)"/>
+    <path class="wire" data-path="ac" d="M1296,357 L1296,831" marker-end="url(#ah)"/>
+    <path class="wire" data-path="b" d="M1414,895 L1150,895 L1150,854 L1128,854" marker-end="url(#ah)"/>
+    <path class="wire thin" data-path="" d="M1296,357 L1296,407" marker-end="url(#ah)"/>
+  </svg>
+
+  <div class="node person" data-path="abc" data-zone="touch" style="left:1.22%;top:42.55%;width:8.54%;height:11.82%">
+    <svg class="ico"><use href="#i-person"/></svg><div class="t">本人</div><div class="d">指示を出し<br>承認を与える</div>
+  </div>
+
+  <div class="node zone" data-path="" data-zone="touch" style="left:11.59%;top:9.09%;width:12.93%;height:10.09%">
+    <div class="zlabel"><svg class="ico"><use href="#i-watch"/></svg>周辺機器</div>
+  </div>
+  <div class="node chipsm" data-path="" data-zone="touch" style="left:12.10%;top:12.73%;width:3.70%;height:5.55%"><svg class="ico"><use href="#i-glasses"/></svg><div class="lbl">スマート<br>グラス</div></div>
+  <div class="node chipsm" data-path="" data-zone="touch" style="left:16.20%;top:12.73%;width:3.70%;height:5.55%"><svg class="ico"><use href="#i-earbuds"/></svg><div class="lbl">イヤホン</div></div>
+  <div class="node chipsm" data-path="" data-zone="touch" style="left:20.30%;top:12.73%;width:3.70%;height:5.55%"><svg class="ico"><use href="#i-watch"/></svg><div class="lbl">スマート<br>ウォッチ</div></div>
+
+  <div class="node zone io" data-path="abc" data-zone="touch" style="left:11.59%;top:20.18%;width:12.93%;height:23.91%"><div class="zlabel"><svg class="ico"><use href="#i-laptop"/></svg>パソコン</div></div>
+  <div class="node subeyebrow" data-path="" data-zone="touch" style="left:12.20%;top:23.82%;width:11.71%;height:1.64%"><svg class="ico"><use href="#i-in"/></svg>INPUT</div>
+  <div class="node box" data-path="a" data-zone="touch" style="left:12.20%;top:25.73%;width:11.71%;height:5.09%"><div class="hd"><svg class="ico"><use href="#i-chat"/></svg><div class="t">Chat</div></div><div class="tech">Terminal（Claude Code）</div></div>
+  <div class="node box" data-path="a" data-zone="touch" style="left:12.20%;top:31.27%;width:11.71%;height:5.09%"><div class="hd"><svg class="ico"><use href="#i-edit"/></svg><div class="t">Edit</div></div><div class="tech">Obsidian・VS Code・nvim</div></div>
+  <div class="node subeyebrow" data-path="" data-zone="touch" style="left:12.20%;top:36.73%;width:11.71%;height:1.64%"><svg class="ico"><use href="#i-out"/></svg>OUTPUT</div>
+  <div class="node box" data-path="b" data-zone="touch" style="left:12.20%;top:38.64%;width:11.71%;height:5.09%"><div class="hd"><svg class="ico"><use href="#i-doc"/></svg><div class="t">Report</div></div><div class="tech">HTML レポート</div></div>
+
+  <div class="node zone io" data-path="abc" data-zone="touch" style="left:11.59%;top:45.45%;width:12.93%;height:24.45%"><div class="zlabel"><svg class="ico"><use href="#i-phone"/></svg>スマホ</div></div>
+  <div class="node subeyebrow" data-path="" data-zone="touch" style="left:12.20%;top:49.09%;width:11.71%;height:1.64%"><svg class="ico"><use href="#i-in"/></svg>INPUT</div>
+  <div class="node box" data-path="c" data-zone="touch" style="left:12.20%;top:51.00%;width:11.71%;height:5.09%"><div class="hd"><svg class="ico"><use href="#i-mic"/></svg><div class="t">Voice 入力</div></div><div class="tech">Whisper（STT）</div></div>
+  <div class="node subeyebrow" data-path="" data-zone="touch" style="left:12.20%;top:56.73%;width:11.71%;height:1.64%"><svg class="ico"><use href="#i-out"/></svg>OUTPUT</div>
+  <div class="node box" data-path="b" data-zone="touch" style="left:12.20%;top:58.64%;width:11.71%;height:5.09%"><div class="hd"><svg class="ico"><use href="#i-bell"/></svg><div class="t">Notify</div></div><div class="tech">Telegram・ntfy</div></div>
+  <div class="node box" data-path="c" data-zone="touch" style="left:12.20%;top:64.18%;width:11.71%;height:5.09%"><div class="hd"><svg class="ico"><use href="#i-speaker"/></svg><div class="t">Voice 出力</div></div><div class="tech">AivisSpeech（TTS）</div></div>
+
+  <div class="node box" data-path="abc" style="left:25.00%;top:43.50%;width:10.00%;height:9.00%"><div class="hd"><svg class="ico"><use href="#i-history"/></svg><div class="t">版管理</div></div><div class="tech">Git / GitHub</div></div>
+
+  <div class="node zone" data-path="abc" data-zone="think" style="left:36.34%;top:9.09%;width:32.93%;height:15.00%"><div class="zlabel"><svg class="ico"><use href="#i-brain"/></svg>考える — 推論エンジン</div></div>
+  <div class="node subeyebrow" data-path="" data-zone="think" style="left:37.00%;top:12.80%;width:19.70%;height:1.45%"><svg class="ico"><use href="#i-cloud"/></svg>クラウド</div>
+  <div class="node box" data-path="ac" data-zone="think" style="left:37.00%;top:14.55%;width:9.50%;height:7.00%"><div class="t">クラウド推論</div><div class="tech">Claude</div></div>
+  <div class="node box" data-path="b" data-zone="think" style="left:47.30%;top:14.55%;width:9.50%;height:7.00%"><div class="t">クラウド推論</div><div class="tech">Gemini</div></div>
+  <div class="node divider" data-path="" data-zone="think" style="left:58.30%;top:12.80%;width:0%;height:8.75%"></div>
+  <div class="node subeyebrow" data-path="" data-zone="think" style="left:59.00%;top:12.80%;width:10.00%;height:1.45%"><svg class="ico"><use href="#i-chip"/></svg>ローカル</div>
+  <div class="node box" data-path="bc" data-zone="think" style="left:59.00%;top:14.55%;width:10.00%;height:7.00%"><div class="t">ローカル推論</div><div class="tech">Ollama</div></div>
+
+  <div class="node box" data-path="b" data-zone="think" style="left:43.00%;top:25.30%;width:22.00%;height:3.45%"><div class="hd"><svg class="ico"><use href="#i-split"/></svg><div class="t">オーケストレーション</div><div class="tech">LiteLLM</div></div></div>
+
+  <div class="node vault" data-path="abc" data-zone="remember" style="left:36.34%;top:31.00%;width:32.93%;height:38.00%">
+    <div class="vhead"><div class="vtrow"><svg class="ico"><use href="#i-layers"/></svg><div class="vt">知識の本体（ナレッジ）</div></div><div class="vs">Markdown + YAML Frontmatter。知識も記憶も人格も設定も同じファイル形式</div></div>
+    <div class="flow"><span class="s">30_Ingest</span><span class="a">→</span><span class="s">20_Domains</span><span class="a">→</span><span class="s">10_Operations</span><span class="a">→</span><span class="s">40_Assets</span></div>
+    <div class="dirgrid">
+      <div class="dircell"><div class="dn">.claude/</div><div class="dr">Hooks・Skills</div></div>
+      <div class="dircell"><div class="dn">00_Control/</div><div class="dr">司令塔</div></div>
+      <div class="dircell"><div class="dn">10_Operations/</div><div class="dr">実行中</div></div>
+      <div class="dircell"><div class="dn">20_Domains/</div><div class="dr">恒久知識</div></div>
+      <div class="dircell"><div class="dn">30_Ingest/</div><div class="dr">一次情報</div></div>
+      <div class="dircell"><div class="dn">40_Assets/</div><div class="dr">完了保管</div></div>
+      <div class="dircell"><div class="dn">50_Self/</div><div class="dr">自己記録</div></div>
+      <div class="dircell"><div class="dn">51_People/</div><div class="dr">人物</div></div>
+      <div class="dircell"><div class="dn">52_Organizations/</div><div class="dr">組織</div></div>
+      <div class="dircell"><div class="dn">53_JARVIS/</div><div class="dr">人格記憶</div></div>
+      <div class="dircell"><div class="dn">99_System/</div><div class="dr">設定基盤</div></div>
+    </div>
+    <div class="vfoot">type / status / ai-provenance / verification</div>
+  </div>
+
+  <div class="node box stack" data-path="ac" style="left:72.50%;top:23.50%;width:13.00%;height:9.00%"><div class="hd"><svg class="ico"><use href="#i-plug"/></svg><div class="t">外部ツール<br>接続口</div></div><div class="tech">MCP サーバー</div></div>
+
+  <div class="node zone io" data-path="" style="left:71.95%;top:37.00%;width:26.71%;height:26.00%"><div class="zlabel"><svg class="ico"><use href="#i-grid"/></svg>周辺アプリ — 独立した自作アプリ</div></div>
+  <div class="node box" data-path="" style="left:72.68%;top:41.00%;width:7.68%;height:8.50%"><div class="t">Freyr</div><div class="d">家計管理</div></div>
+  <div class="node box" data-path="" style="left:80.85%;top:41.00%;width:7.68%;height:8.50%"><div class="t">Bifrost</div><div class="d">コミュニティ運営</div></div>
+  <div class="node box" data-path="" style="left:89.02%;top:41.00%;width:7.68%;height:8.50%"><div class="t">news-platform</div><div class="d">ニュース収集</div></div>
+  <div class="node box future" data-path="" style="left:72.68%;top:51.50%;width:7.68%;height:8.50%"><div class="t">習慣トラッカー</div><div class="tech">構想中</div></div>
+  <div class="node box future" data-path="" style="left:80.85%;top:51.50%;width:7.68%;height:8.50%"><div class="t">健康管理</div><div class="tech">構想中</div></div>
+
+  <div class="node zone" data-path="abc" style="left:71.95%;top:71.00%;width:26.71%;height:20.00%"><div class="zlabel"><svg class="ico"><use href="#i-globe"/></svg>外部の世界</div></div>
+  <div class="node box" data-path="ac" style="left:73.00%;top:75.50%;width:12.00%;height:12.50%"><div class="hd"><svg class="ico"><use href="#i-cal"/></svg><div class="t">外部サービス</div></div><div class="tech">Google Calendar<br>Gmail・Google Drive</div></div>
+  <div class="node box" data-path="b" style="left:86.50%;top:75.50%;width:11.50%;height:12.50%"><div class="hd"><svg class="ico"><use href="#i-feed"/></svg><div class="t">Web情報源</div></div><div class="tech">Google・YouTube・X</div></div>
+
+  <div class="node zone" data-path="b" style="left:11.59%;top:73.64%;width:57.68%;height:13.09%"><div class="zlabel"><svg class="ico"><use href="#i-clock"/></svg>時間で動く仕事（launchd）</div></div>
+  <div class="node box" data-path="b" style="left:12.07%;top:77.45%;width:7.68%;height:7.82%"><div class="time">3:30</div><div class="t">自動退避</div></div>
+  <div class="node box" data-path="b" style="left:20.24%;top:77.45%;width:7.68%;height:7.82%"><div class="time">3:30</div><div class="t">索引の更新</div></div>
+  <div class="node box" data-path="b" style="left:28.41%;top:77.45%;width:7.68%;height:7.82%"><div class="time">4:00</div><div class="t">メモの分類</div></div>
+  <div class="node box" data-path="b" style="left:36.59%;top:77.45%;width:7.68%;height:7.82%"><div class="time">5:20</div><div class="t">情報収集</div></div>
+  <div class="node box" data-path="b" style="left:44.76%;top:77.45%;width:7.68%;height:7.82%"><div class="time">5:25</div><div class="t">朝の配信</div></div>
+  <div class="node box" data-path="b" style="left:52.93%;top:77.45%;width:7.68%;height:7.82%"><div class="time">週次</div><div class="t">差分の要約</div></div>
+  <div class="node box" data-path="b" style="left:61.10%;top:77.45%;width:7.68%;height:7.82%"><div class="time">常駐</div><div class="t">資料の取り込み</div></div>
+
+  <div class="axis-badge" data-zone="think" style="left:33.9%;top:6.8%">1</div>
+  <div class="axis-badge" data-zone="remember" style="left:33.9%;top:29.3%">2</div>
+  <div class="axis-badge" data-zone="touch" style="left:9.3%;top:6.8%">3</div>
+</div>
+</div>
+</template>
+
+<!-- ═══════════ デッキ本体 ═══════════ -->
+<div class="deck" id="deck">
+
+  <!-- 1. タイトル -->
+  <section class="slide title" data-chapter="title">
+    <div class="kicker">AI勉強会 ・ 2026.10.02</div>
+    <div class="brand">JARVIS</div>
+    <div class="lede">個人開発で実装する、自律的パーソナルAI</div>
+    <div class="meta"><span>社内勉強会 vol.1</span><span>·</span><span>Mizuki</span></div>
+  </section>
+
+  <!-- 2. 導入：スコープ（省略可・メッセージラインの外） -->
+  <section class="slide" data-chapter="intro">
+    <div class="skip-badge">省略可</div>
+    <div class="shead">
+      <div class="kicker">導入 · 1/3</div>
+      <h1 class="headline">前提条件：個人開発</h1>
+    </div>
+    <div class="sbody">
+      <div class="scopebox">
+        <div class="scopeline"><b>環境</b>自宅Mac（M5）1台＋クラウドAPI（Claude Code Pro プラン）</div>
+        <div class="scopeline"><b>進め方</b>Claude Codeとの対話で実装・設計変更を繰り返しながら育てた、素の個人開発</div>
+        <div class="scopeline"><b>経験</b>開発経験はほぼゼロからのスタート</div>
+        <div class="scopeline"><b>期間</b>設計に着手してから約半年</div>
+      </div>
+      <div class="agenda">
+        <div class="achip now">導入</div>
+        <div class="achip">仕組み（経路）</div>
+        <div class="achip">設計（技術スタック）</div>
+        <div class="achip">これから</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 導入：ビジョン -->
+  <section class="slide" data-chapter="intro">
+    <div class="shead">
+      <div class="kicker">導入 · 2/3</div>
+      <h1 class="headline">自律的パーソナルAI構築</h1>
+    </div>
+    <div class="sbody">
+      <div class="cardgrid cols-4">
+        <div class="vcard"><svg class="ico"><use href="#i-cal"/></svg><div class="vt">予定を管理する</div><div class="vd">自律的に働きかけ、声をかけるタイミングまで判断する</div></div>
+        <div class="vcard"><svg class="ico"><use href="#i-moon"/></svg><div class="vt">夜間に仕事を消化する</div><div class="vd">深夜3:30〜5:25に動き、朝には結果が揃っている</div></div>
+        <div class="vcard"><svg class="ico"><use href="#i-spark"/></svg><div class="vt">生活全般を支える</div><div class="vd">家計・健康・学習…境界を決めずに広げていく</div></div>
+        <div class="vcard"><svg class="ico"><use href="#i-speaker"/></svg><div class="vt">自分から話しかけてくる</div><div class="vd">STT→推論→TTSの経路で、呼びかける前に話しかけてくる</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 導入：JARVIS -->
+  <section class="slide" data-chapter="intro">
+    <div class="shead">
+      <div class="kicker">導入 · 3/3</div>
+      <h1 class="headline">JARVIS</h1>
+    </div>
+    <div class="sbody">
+      <div class="revealbox">
+        <p>JARVIS（Just A Rather Very Intelligent System）</p>
+        <p>着想は映画『アイアンマン』（MARVEL）に登場するAIアシスタント</p>
+        <p>実装上の呼称は別にあるが、今日は分かりやすさを優先してJARVISに統一する</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 全体アーキテクチャ -->
+  <section class="slide" data-chapter="map">
+    <div class="shead tight">
+      <div class="kicker">仕組み · 1/5</div>
+      <h1 class="headline">情報をmd形式でディレクトリ（以降ナレッジ）に集約</h1>
+    </div>
+    <div class="sbody">
+      <div class="diagram-slot full" data-fixed="all"></div>
+      <div class="routecaption">3本の経路は同時には使われません。ここから1本ずつ見ていきます。</div>
+    </div>
+  </section>
+
+  <!-- 6. 経路A -->
+  <section class="slide" data-chapter="map">
+    <div class="shead tight">
+      <div class="kicker">仕組み · 2/5</div>
+      <h1 class="headline">経路A: Claude Codeによるナレッジの読み書き</h1>
+    </div>
+    <div class="sbody">
+      <div class="diagram-slot full" data-fixed="a"></div>
+      <div class="routecaption">Chat / Edit → <b>Claude</b> → ナレッジ。人が隣にいて、その場で承認しながら進む。</div>
+    </div>
+  </section>
+
+  <!-- 7. 経路B -->
+  <section class="slide" data-chapter="map">
+    <div class="shead tight">
+      <div class="kicker">仕組み · 3/5</div>
+      <h1 class="headline">経路B: launchdが動かす夜間複数ジョブ</h1>
+    </div>
+    <div class="sbody">
+      <div class="diagram-slot full" data-fixed="b"></div>
+      <div class="routecaption">launchd → <b>オーケストレーション</b> → Ollama / Gemini → ナレッジへ「提案」。翌朝まとめて承認する。</div>
+    </div>
+  </section>
+
+  <!-- 8. 経路C -->
+  <section class="slide" data-chapter="map">
+    <div class="shead tight">
+      <div class="kicker">仕組み · 4/5</div>
+      <h1 class="headline">経路C: 音声による会話形式</h1>
+    </div>
+    <div class="sbody">
+      <div class="diagram-slot full" data-fixed="c"></div>
+      <div class="routecaption">Whisper → Claude／Ollama → ナレッジ → AivisSpeech。単純な会話はローカル、複雑なタスクはクラウドが担う。次の制約はパソコン上での音声認識精度。</div>
+    </div>
+  </section>
+
+  <!-- 9. SSoT｜経路依存性の解消 -->
+  <section class="slide" data-chapter="map">
+    <div class="shead">
+      <div class="kicker">仕組み · 5/5</div>
+      <h1 class="headline">SSoT: 経路依存性の解消</h1>
+    </div>
+    <div class="sbody">
+    <table class="cmp">
+      <tr><th>経路</th><th>入口</th><th>推論</th><th>承認のタイミング</th><th>向いている場面</th></tr>
+      <tr><td class="hd">A・対話</td><td>Chat／Edit</td><td>Claude（クラウド）</td><td>その場で都度</td><td>設計など思考力が要る仕事</td></tr>
+      <tr><td class="hd">B・無人</td><td>launchd（7ジョブ）</td><td>Gemini／Ollama</td><td>翌朝まとめて</td><td>定型的で繰り返しの多い仕事</td></tr>
+      <tr><td class="hd">C・声</td><td>Whisper→AivisSpeech</td><td>Claude／Ollama</td><td>その場で機械的</td><td>外出先・両手がふさがる時</td></tr>
+    </table>
+    <div class="notline"><b>SSoT（Single Source of Truth）</b>：全ての経路が最終的に読み書きする「ただ1つの正本」。ここではナレッジがそれにあたる——経路をまたいでも文脈が分断されない</div>
+    </div>
+  </section>
+
+  <!-- 10. 技術選定：推論・記憶・インターフェース -->
+  <section class="slide" data-chapter="design">
+    <div class="shead">
+      <div class="kicker">設計 · 1/6</div>
+      <h1 class="headline">技術選定: 推論・記憶・インターフェース</h1>
+    </div>
+    <div class="sbody">
+      <div class="axislegend">
+        <div class="aitem"><span class="anum">1</span>推論エンジン</div>
+        <div class="aitem"><span class="anum">2</span>記憶</div>
+        <div class="aitem"><span class="anum">3</span>インターフェース</div>
+      </div>
+      <div class="diagram-slot full axes" data-fixed="axes"></div>
+    </div>
+  </section>
+
+  <!-- 11. 推論エンジン -->
+  <section class="slide" data-chapter="design">
+    <div class="shead tight">
+      <div class="kicker">設計 · 2/6</div>
+      <h1 class="headline">推論エンジン: ローカルとクラウドのハイブリッド戦略</h1>
+    </div>
+    <div class="sbody">
+      <div class="split2">
+        <div class="panel">
+          <div class="ph"><svg class="ico"><use href="#i-chip"/></svg>ローカル（Ollama, Mac／Metal）</div>
+          <ul><li>BGE-M3で埋め込み生成</li><li>bge-reranker-v2-m3（MPS）で再スコアリング</li><li>セキュリティ・レイテンシ・オフライン耐性が強み</li></ul>
+          <div class="tag">声の対話・定型バッチ・個人情報を含む処理に使う</div>
+        </div>
+        <div class="panel">
+          <div class="ph"><svg class="ico"><use href="#i-cloud"/></svg>クラウド（Claude／Gemini）</div>
+          <ul><li>Claudeは設計・実装・対話を担当</li><li>Geminiは PDF・Web取り込みの要約に特化</li><li>推論力が強み</li></ul>
+          <div class="tag">設計・実装などの思考タスク、エージェント活用に使う</div>
+        </div>
+      </div>
+      <div class="notline"><b>オーケストレーション</b>：LiteLLM（VM・ポート4000）が両者への呼び出しを一本化。観測性はLangfuse（VM・ポート3000）が担うが、CPU負荷の問題で通常は停止しており、計測したい時だけ起動する</div>
+      <div class="notline">全部クラウドにすると速さ・秘密保持・オフライン性を満たせず、全部ローカルにすると設計やエージェントタスクに推論力が届かない。ハイブリッドにしているのはこのトレードオフのため</div>
+    </div>
+  </section>
+
+  <!-- 12. ナレッジのディレクトリ構成 -->
+  <section class="slide" data-chapter="design">
+    <div class="shead">
+      <div class="kicker">設計 · 3/6</div>
+      <h1 class="headline">ナレッジのディレクトリ構成</h1>
+    </div>
+    <div class="sbody">
+      <div class="dirshow">
+        <div class="dirflow"><span class="s">30_Ingest</span><span class="a">→</span><span class="s">20_Domains</span><span class="a">→</span><span class="s">10_Operations</span><span class="a">→</span><span class="s">40_Assets</span></div>
+        <div class="dirgrid2">
+          <div class="dircell2"><div class="dn">.claude/</div><div class="dr">Hooks・Skills</div></div>
+          <div class="dircell2"><div class="dn">00_Control/</div><div class="dr">司令塔</div></div>
+          <div class="dircell2"><div class="dn">10_Operations/</div><div class="dr">実行中</div></div>
+          <div class="dircell2"><div class="dn">20_Domains/</div><div class="dr">恒久知識</div></div>
+          <div class="dircell2"><div class="dn">30_Ingest/</div><div class="dr">一次情報</div></div>
+          <div class="dircell2"><div class="dn">40_Assets/</div><div class="dr">完了保管</div></div>
+          <div class="dircell2"><div class="dn">50_Self/</div><div class="dr">自己記録</div></div>
+          <div class="dircell2"><div class="dn">51_People/</div><div class="dr">人物</div></div>
+          <div class="dircell2"><div class="dn">52_Organizations/</div><div class="dr">組織</div></div>
+          <div class="dircell2"><div class="dn">53_JARVIS/</div><div class="dr">人格・記憶</div></div>
+          <div class="dircell2 accent"><div class="dn">99_System/</div><div class="dr">設定基盤</div></div>
+        </div>
+      </div>
+      <div class="vaultnote"><b>99_System</b> は、この仕組み自体を定義する設定とルールの置き場所——いわば土台</div>
+      <div class="vaultnote">プログレッシブ・ディスクロージャーを意識し、<b>コンテキスト・ロット</b>を防ぐ</div>
+    </div>
+  </section>
+
+  <!-- 13. 記憶の分離設計 -->
+  <section class="slide" data-chapter="design">
+    <div class="shead">
+      <div class="kicker">設計 · 4/6</div>
+      <h1 class="headline">短期記憶と長期記憶の分離設計</h1>
+    </div>
+    <div class="sbody">
+      <div class="cardgrid cols-4">
+        <div class="vcard"><svg class="ico"><use href="#i-spark"/></svg><div class="vt">短期記憶</div><div class="vd">作業キャッシュ。消えても困らない、揮発性の記憶</div></div>
+        <div class="vcard"><svg class="ico"><use href="#i-doc"/></svg><div class="vt">メモ帳</div><div class="vd">30_Ingest。まだ整理されていない下書き</div></div>
+        <div class="vcard"><svg class="ico"><use href="#i-history"/></svg><div class="vt">長期記憶</div><div class="vd">20_Domainsほか。Git管理で、消えない記憶</div></div>
+        <div class="vcard"><svg class="ico"><use href="#i-brain"/></svg><div class="vt">人格</div><div class="vd">Constitutionファイル。これもGit管理で、変更履歴が追える</div></div>
+      </div>
+      <div class="notline">消えていい記憶と、消えてはいけない記憶を、最初から分けて設計している。</div>
+    </div>
+  </section>
+
+  <!-- 14. Skills・Hooks・Frontmatter -->
+  <section class="slide" data-chapter="design">
+    <div class="shead">
+      <div class="kicker">設計 · 5/6</div>
+      <h1 class="headline">Skills・Hooks・Frontmatter設計</h1>
+    </div>
+    <div class="sbody">
+      <div class="cardgrid cols-3">
+        <div class="vcard"><svg class="ico"><use href="#i-grid"/></svg><div class="vt">Skills（19本）</div><div class="vd">定型タスクをパッケージ化した指示書。スラッシュコマンドで毎回ゼロから説明せず実行できる</div></div>
+        <div class="vcard"><svg class="ico"><use href="#i-shield"/></svg><div class="vt">Hooks（4本）</div><div class="vd">SessionStart／PreToolUse／PostToolUse／Stopの4イベントに対応。`updated`等の更新はAI判断に委ねない</div></div>
+        <div class="vcard"><svg class="ico"><use href="#i-doc"/></svg><div class="vt">Frontmatter</div><div class="vd">type（12種）・status（成熟度4段階）・tags（topic/proj/org）を必須化</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15. 入力環境の変遷 -->
+  <section class="slide" data-chapter="design">
+    <div class="shead">
+      <div class="kicker">設計 · 6/6</div>
+      <h1 class="headline">入力環境: IDEからターミナル環境へ移行</h1>
+    </div>
+    <div class="sbody">
+      <div class="stepflow">
+        <div class="step"><div class="idx">1</div><div class="st">Obsidian</div><div class="sr">ノート編集中心。コード編集・複数エージェント運用には不向き</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="idx">2</div><div class="st">IDE（Cursor / VS Code）</div><div class="sr">マウス操作が必要で、キーボードだけで完結しない。やや重い</div></div>
+        <div class="arrow">→</div>
+        <div class="step final"><div class="idx">3</div><div class="st">Ghostty + tmux + nvim</div><div class="sr">キーボードのみで完結。軽量で、設計の柔軟性も高い</div><div class="decisive">決定打：tmuxでエージェントを並列に動かせる</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16. 残課題 -->
+  <section class="slide" data-chapter="forward">
+    <div class="shead">
+      <div class="kicker">これから · 1/2</div>
+      <h1 class="headline">残課題</h1>
+    </div>
+    <div class="sbody">
+      <div class="gaprow">
+        <div class="gi"><svg class="ico"><use href="#i-feed"/></svg>Langfuse</div>
+        <div class="now"><span class="lbl">今</span>導入済みだが、VM側のCPU負荷の問題で常時は起動できていない</div>
+        <div class="next"><span class="lbl">次</span>常時動かせる構成に見直す</div>
+      </div>
+      <div class="gaprow">
+        <div class="gi"><svg class="ico"><use href="#i-globe"/></svg>ベクトル検索</div>
+        <div class="now"><span class="lbl">今</span>BM25＋ベクトル＋RRF＋Rerankerは実際に稼働しているが、なぜこの構成がこの精度を出すのか自分の言葉で説明しきれていない</div>
+        <div class="next"><span class="lbl">次</span>仕組みの理解を深める</div>
+      </div>
+      <div class="gaprow">
+        <div class="gi"><svg class="ico"><use href="#i-split"/></svg>オーケストレーション</div>
+        <div class="now"><span class="lbl">今</span>LiteLLM経由のルーティングは動いているが、コストや応答速度の最適化には未着手</div>
+        <div class="next"><span class="lbl">次</span>チューニングの勘所を掴む</div>
+      </div>
+      <div class="notes-admit">
+        <p><b>作って、動かして、撤回する</b>、を繰り返しながら設計を固めてきた</p>
+        <p>バイブコーディング（会話ベースの実装）で進めてきたため、自分自身、設計の全体像を完全には把握しきれていない部分がある</p>
+      </div>
+      <div class="outlook">次に挑みたいのは、声でのやり取りの完成（音声認識精度の向上）と、一度撤回したものへの再挑戦。</div>
+    </div>
+  </section>
+
+  <!-- 17. メッセージ -->
+  <section class="slide closing" data-chapter="forward">
+    <div class="shead">
+      <div class="kicker">これから · 2/2</div>
+      <h1 class="headline">メッセージ</h1>
+    </div>
+    <div class="sbody">
+      <div class="msg">ナレッジを一つに集約し、そこへ対話・無人実行・音声という複数の経路でアクセスできるようにした。<br>出力の手段（通知・レポート・音声）を増やしていくことで、パーソナルAIとしての振る舞いに近づいていく。</div>
+      <div class="cta">参考になる部分があれば、ぜひ試してみてください。</div>
+    </div>
+  </section>
+
+</div>
+
+<nav class="navrail" id="navrail">
+  <button class="seg" data-chapter="intro" data-jump="1">導入</button>
+  <button class="seg" data-chapter="map" data-jump="4">仕組み</button>
+  <button class="seg" data-chapter="design" data-jump="9">設計</button>
+  <button class="seg" data-chapter="forward" data-jump="15">これから</button>
+  <span class="counter" id="navcounter">1 / 17</span>
+</nav>
+
+<script>
+(function () {
+  // ── 図テンプレートを各スロットへ複製 ──
+  var tpl = document.getElementById('diagram-tpl');
+  document.querySelectorAll('.diagram-slot').forEach(function (slot) {
+    var frag = tpl.content.cloneNode(true);
+    slot.appendChild(frag);
+    var canvas = slot.querySelector('.canvas');
+    var route = slot.getAttribute('data-fixed');
+    var zone = slot.getAttribute('data-zone');
+
+    if (route === 'axes') {
+      // 3つの技術選定ゾーンを同時にハイライト＋番号バッジを表示
+      canvas.classList.add('zonefocus', 'show-badges');
+      canvas.querySelectorAll('[data-zone]').forEach(function (el) {
+        el.classList.add('zone-on');
+      });
+    } else if (route && route !== 'all') {
+      canvas.classList.add('focus');
+      canvas.querySelectorAll('[data-path]').forEach(function (el) {
+        var v = el.getAttribute('data-path') || '';
+        if (v.indexOf(route) !== -1) el.classList.add('on');
+      });
+    }
+    if (zone) {
+      canvas.classList.add('zonefocus');
+      canvas.querySelectorAll('[data-zone]').forEach(function (el) {
+        if (el.getAttribute('data-zone') === zone) el.classList.add('zone-on');
+      });
+    }
+  });
+
+  // ── ナビレール・キーボード操作 ──
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var deck = document.getElementById('deck');
+  var segs = Array.prototype.slice.call(document.querySelectorAll('.navrail .seg'));
+  var counter = document.getElementById('navcounter');
+
+  function setActive(idx) {
+    var ch = slides[idx].getAttribute('data-chapter');
+    segs.forEach(function (s) { s.classList.toggle('active', s.getAttribute('data-chapter') === ch); });
+    counter.textContent = (idx + 1) + ' / ' + slides.length;
+  }
+
+  // scrollIntoView / behavior:'smooth' は scroll-snap-type:mandatory と衝突し
+  // 無視されることがあるため、instant + CSS側のtransitionで代替する
+  function goTo(idx) {
+    deck.scrollTo({ top: slides[idx].offsetTop, behavior: 'instant' });
+  }
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting && e.intersectionRatio > 0.6) setActive(slides.indexOf(e.target));
+    });
+  }, { root: deck, threshold: [0.6] });
+  slides.forEach(function (s) { io.observe(s); });
+
+  segs.forEach(function (s) {
+    s.addEventListener('click', function () { goTo(+s.getAttribute('data-jump')); });
+  });
+
+  function currentIndex() {
+    var best = 0, bestTop = Infinity;
+    slides.forEach(function (s, i) {
+      var top = Math.abs(s.getBoundingClientRect().top);
+      if (top < bestTop) { bestTop = top; best = i; }
+    });
+    return best;
+  }
+
+  document.addEventListener('keydown', function (e) {
+    var keys = { down: ['ArrowDown', 'ArrowRight', 'PageDown', ' '], up: ['ArrowUp', 'ArrowLeft', 'PageUp'] };
+    var cur = currentIndex();
+    if (keys.down.indexOf(e.key) !== -1) {
+      e.preventDefault();
+      goTo(Math.min(cur + 1, slides.length - 1));
+    } else if (keys.up.indexOf(e.key) !== -1) {
+      e.preventDefault();
+      goTo(Math.max(cur - 1, 0));
+    }
+  });
+
+  setActive(0);
+})();
+</script>
+</body>
+</html>
